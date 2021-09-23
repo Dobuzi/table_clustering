@@ -61,4 +61,39 @@ main ()
         extract.filter (*cloud_f);
         *cloud_filtered = *cloud_f;
     }
+
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    tree->setInputCloud (cloud_filtered);
+
+    std::vector<pcl::PointIndices> cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    ec.setClusterTolerance (0.02);
+    ec.setMinClusterSize (100);
+    ec.setMaxClusterSize (25000);
+    ec.setSearchMethod (tree);
+    ec.setInputCloud (cloud_filtered);
+    ec.extract (cluster_indices);
+
+    int j = 0;
+
+    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
+    {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+
+        for (const auto& idx : it->indices)
+        {
+            cloud_cluster->push_back ((*cloud_filtered)[idx]);
+        }
+
+        cloud_cluster->width = cloud_cluster->size();
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
+
+        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size() << " data points." << std::endl;
+        std::stringstream ss;
+        ss << "data/cloud_cluster_" << j << ".pcd";
+        writer.write<pcl::PointXYZ> (ss.str(), *cloud_cluster, false);
+        j++;
+    }
+    return 0;
 }
